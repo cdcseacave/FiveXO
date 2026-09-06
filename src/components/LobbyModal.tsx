@@ -70,7 +70,10 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
     const ok = await copyToClipboard(inviteUrl);
     if (ok) {
       setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
+      setTimeout(() => {
+        setCopiedLink(false);
+        onClose();
+      }, 400);
     }
   };
 
@@ -79,7 +82,10 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
     const ok = await copyToClipboard(networkState.roomCode);
     if (ok) {
       setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
+      setTimeout(() => {
+        setCopiedCode(false);
+        onClose();
+      }, 400);
     }
   };
 
@@ -268,9 +274,17 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                       </p>
                     )}
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-1 animate-pulse">
-                      <Radio size={14} className="text-cyan-400" />
-                      <span>Waiting for opponent to connect...</span>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-2 text-xs text-slate-400 animate-pulse">
+                        <Radio size={14} className="text-cyan-400" />
+                        <span>Waiting for opponent...</span>
+                      </div>
+                      <button
+                        onClick={onClose}
+                        className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        Return to Board
+                      </button>
                     </div>
                   </div>
                 ) : (

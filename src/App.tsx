@@ -403,39 +403,6 @@ export function App() {
       {/* Main Game Stage */}
       <div className="flex-1 flex overflow-hidden relative">
         <main className="flex-1 h-full relative">
-          {/* Online Match Floating HUD Badge */}
-          {mode === 'online-1v1' && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-slate-700/70 text-xs shadow-2xl pointer-events-auto">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  networkState.connected
-                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse'
-                    : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse'
-                }`}
-              />
-              <span className="font-semibold text-slate-200">
-                {networkState.connected ? (
-                  <>
-                    <span className="text-emerald-400 font-bold">Connected</span> • Opponent ({networkState.role === 'host' ? 'Host: You are Black' : 'Guest: You are White'} • {networkState.pingMs}ms)
-                  </>
-                ) : (
-                  <>
-                    <span className="text-amber-400 font-bold">Waiting for Opponent</span>
-                    {networkState.roomCode && (
-                      <span className="text-cyan-300 font-mono ml-1.5 font-bold">Room #{networkState.roomCode}</span>
-                    )}
-                  </>
-                )}
-              </span>
-              <button
-                onClick={() => setIsLobbyOpen(true)}
-                className="ml-1 text-[11px] px-2.5 py-0.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 font-bold border border-cyan-800/60 transition-colors"
-              >
-                {networkState.connected ? 'Room Details' : 'Copy Link'}
-              </button>
-            </div>
-          )}
-
           <BoardView
             board={board}
             theme={theme}
