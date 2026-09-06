@@ -121,7 +121,7 @@ export class BoardRenderer {
         const p = board.cells[rowOffset + x];
         if (p !== 0) {
           const isLast = lastMove !== null && lastMove[0] === x && lastMove[1] === y;
-          this.drawStone(ctx, x, y, p as Player, theme, isLast, animTime);
+          this.drawStone(ctx, x, y, p as Player, theme, isLast);
         }
       }
     }
@@ -280,8 +280,7 @@ export class BoardRenderer {
     y: number,
     player: Player,
     theme: BoardTheme,
-    isLast: boolean = false,
-    animTime: number = 0
+    isLast: boolean = false
   ): void {
     const cx = RULER_MARGIN + (x + 0.5) * CELL_PIXELS;
     const cy = RULER_MARGIN + (y + 0.5) * CELL_PIXELS;
@@ -390,14 +389,21 @@ export class BoardRenderer {
     }
 
     if (isLast) {
-      const pulse = (Math.sin(animTime * 0.006) + 1) * 0.5;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#06b6d4';
-      ctx.strokeStyle = player === 1 ? 'rgba(34, 211, 238, 0.9)' : 'rgba(251, 191, 36, 0.9)';
-      ctx.lineWidth = 2 + pulse * 1.5;
+      ctx.save();
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = player === 1 ? '#38bdf8' : '#fbbf24';
+      ctx.strokeStyle = player === 1 ? '#38bdf8' : '#fbbf24';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(cx, cy, radius + 3 + pulse * 2, 0, Math.PI * 2);
+      ctx.arc(cx, cy, radius + 4, 0, Math.PI * 2);
       ctx.stroke();
+
+      // Tactile center pinpoint dot
+      ctx.fillStyle = player === 1 ? '#38bdf8' : '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     ctx.restore();

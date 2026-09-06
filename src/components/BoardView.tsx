@@ -143,11 +143,15 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }
   }, []);
 
-  // Animation render loop
-  useEffect(() => {
-    let animId: number;
-    const renderLoop = (time: number) => {
-      if (rendererRef.current && canvasRef.current) {
+  // Single frame on-demand renderer
+  const renderFrame = useCallback(
+    (time: number = performance.now()) => {
+      if (
+        rendererRef.current &&
+        canvasRef.current &&
+        viewportSize.width > 0 &&
+        viewportSize.height > 0
+      ) {
         rendererRef.current.render(
           board,
           cameraRef.current,
@@ -164,12 +168,34 @@ export const BoardView: React.FC<BoardViewProps> = ({
           }
         );
       }
-      animId = requestAnimationFrame(renderLoop);
-    };
+    },
+    [board, theme, hoverCoord, currentTurn, showThreats, lastMove, winInfo, viewportSize]
+  );
 
-    animId = requestAnimationFrame(renderLoop);
-    return () => cancelAnimationFrame(animId);
-  }, [board, theme, hoverCoord, currentTurn, showThreats, lastMove, winInfo, viewportSize]);
+  // On-Demand Render:
+  // - When winInfo is active, runs continuous 60fps loop for the celebratory laser.
+  // - When idle (turn-based play), renders ONCE per state change, then uses 0% GPU / CPU.
+  useEffect(() => {
+    let animId: number | null = null;
+    if (winInfo && winInfo.line.length >= 5) {
+      let active = true;
+      const loop = (time: number) => {
+        if (!active) return;
+        renderFrame(time);
+        animId = requestAnimationFrame(loop);
+      };
+      animId = requestAnimationFrame(loop);
+      return () => {
+        active = false;
+        if (animId) cancelAnimationFrame(animId);
+      };
+    } else {
+      animId = requestAnimationFrame((time) => renderFrame(time));
+      return () => {
+        if (animId) cancelAnimationFrame(animId);
+      };
+    }
+  }, [winInfo, renderFrame, camera]);
 
   // Auto-center on new last move if off-screen
   useEffect(() => {
@@ -256,7 +282,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
     if (rendererRef.current && !disabled) {
       const coord = rendererRef.current.screenToBoard(mouseX, mouseY, cameraRef.current);
-      setHoverCoord(coord);
+      setHoverCoord((prev) => {
+        if (!prev && !coord) return prev;
+        if (prev && coord && prev[0] === coord[0] && prev[1] === coord[1]) return prev;
+        return coord;
+      });
     }
   };
 

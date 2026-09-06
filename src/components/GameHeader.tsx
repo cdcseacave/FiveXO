@@ -13,7 +13,9 @@ import {
   Music,
   Settings,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
+import type { NetworkState } from '../network/peer-connection';
 
 interface GameHeaderProps {
   mode: GameMode;
@@ -25,6 +27,11 @@ interface GameHeaderProps {
   showThreats: boolean;
   soundEnabled: boolean;
   musicEnabled: boolean;
+  networkState?: NetworkState;
+  unreadChatCount?: number;
+  isChatOpen?: boolean;
+  onToggleChat?: () => void;
+  onOpenLobby?: () => void;
   onSelectMode: (mode: GameMode) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -46,6 +53,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   showThreats,
   soundEnabled,
   musicEnabled,
+  networkState,
+  unreadChatCount = 0,
+  isChatOpen = false,
+  onToggleChat,
+  onOpenLobby,
   onSelectMode,
   onUndo,
   onRedo,
@@ -147,6 +159,30 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <span className="text-[11px] font-mono text-slate-500">Move #{moveCount}</span>
         </div>
 
+        {/* WebRTC Match Status Badge */}
+        {mode === 'online-1v1' && networkState && (
+          <button
+            onClick={onOpenLobby}
+            title="Click to view Room Details & Shareable Link"
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
+              networkState.connected
+                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:bg-emerald-900/80'
+                : 'bg-amber-950/80 border-amber-500/60 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)] hover:bg-amber-900/80'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                networkState.connected ? 'bg-emerald-400' : 'bg-amber-400'
+              } animate-pulse`}
+            />
+            <span>
+              {networkState.connected
+                ? `CONNECTED (${networkState.role === 'host' ? 'Host: Black' : 'Guest: White'}) • ${networkState.pingMs}ms`
+                : `WAITING FOR OPPONENT • Room: ${networkState.roomCode || '...'}`}
+            </span>
+          </button>
+        )}
+
         {/* Evaluation Bar */}
         <div className="w-36 h-1.5 bg-amber-500/80 rounded-full overflow-hidden flex border border-slate-700/50" title={`Black: ${blackWinPct}% | White: ${100 - blackWinPct}%`}>
           <div
@@ -158,6 +194,24 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
       {/* Right: Actions Toolbar */}
       <div className="flex items-center gap-1">
+        {mode === 'online-1v1' && onToggleChat && (
+          <button
+            onClick={onToggleChat}
+            title="Toggle Match Chat"
+            className={`relative p-2 rounded-lg transition-colors ${
+              isChatOpen
+                ? 'text-cyan-400 bg-cyan-500/20 shadow-sm'
+                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+            }`}
+          >
+            <MessageSquare size={16} />
+            {unreadChatCount > 0 && !isChatOpen && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-bounce shadow-md">
+                {unreadChatCount}
+              </span>
+            )}
+          </button>
+        )}
         <button
           onClick={onUndo}
           disabled={!canUndo}

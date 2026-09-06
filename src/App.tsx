@@ -13,6 +13,7 @@ import { bgm } from './audio/music-synthesizer';
 import type { MusicTheme } from './audio/music-synthesizer';
 import { PeerNetwork } from './network/peer-connection';
 import type { NetworkState } from './network/peer-connection';
+import { InGameChat } from './components/InGameChat';
 import { GomokuAI } from './ai/negamax';
 
 export function App() {
@@ -60,6 +61,10 @@ export function App() {
     pingMs: 0,
   });
   const [chatMessages, setChatMessages] = useState<Array<{ sender: string; text: string; time: string }>>([]);
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(true);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+  const isChatOpenRef = useRef<boolean>(true);
+  isChatOpenRef.current = isChatOpen;
   const networkRef = useRef<PeerNetwork | null>(null);
 
   // Initialize Worker
@@ -97,6 +102,10 @@ export function App() {
               time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             },
           ]);
+          if (!isChatOpenRef.current) {
+            setUnreadChatCount((c) => c + 1);
+          }
+          sfx.playStoneClick(2);
         } else if (msg.type === 'RESTART') {
           resetGame();
         }
@@ -176,6 +185,24 @@ export function App() {
     },
     [board, mode]
   );
+
+  // Send Chat Message
+  const handleSendChatMessage = useCallback((text: string) => {
+    if (networkRef.current && networkRef.current.state.connected) {
+      networkRef.current.send({
+        type: 'CHAT',
+        payload: { text },
+      });
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: 'You',
+          text,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  }, []);
 
   // Trigger AI Move
   const triggerAiTurn = useCallback(() => {
@@ -350,6 +377,14 @@ export function App() {
         showThreats={showThreats}
         soundEnabled={soundEnabled}
         musicEnabled={musicEnabled}
+        networkState={networkState}
+        unreadChatCount={unreadChatCount}
+        isChatOpen={isChatOpen}
+        onToggleChat={() => {
+          setIsChatOpen((prev) => !prev);
+          setUnreadChatCount(0);
+        }}
+        onOpenLobby={() => setIsLobbyOpen(true)}
         onSelectMode={(newMode) => {
           setMode(newMode);
           if (newMode === 'online-1v1') setIsLobbyOpen(true);
@@ -368,6 +403,39 @@ export function App() {
       {/* Main Game Stage */}
       <div className="flex-1 flex overflow-hidden relative">
         <main className="flex-1 h-full relative">
+          {/* Online Match Floating HUD Badge */}
+          {mode === 'online-1v1' && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-slate-900/90 backdrop-blur-md px-4 py-1.5 rounded-full border border-slate-700/70 text-xs shadow-2xl pointer-events-auto">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  networkState.connected
+                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse'
+                    : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse'
+                }`}
+              />
+              <span className="font-semibold text-slate-200">
+                {networkState.connected ? (
+                  <>
+                    <span className="text-emerald-400 font-bold">Connected</span> • Opponent ({networkState.role === 'host' ? 'Host: You are Black' : 'Guest: You are White'} • {networkState.pingMs}ms)
+                  </>
+                ) : (
+                  <>
+                    <span className="text-amber-400 font-bold">Waiting for Opponent</span>
+                    {networkState.roomCode && (
+                      <span className="text-cyan-300 font-mono ml-1.5 font-bold">Room #{networkState.roomCode}</span>
+                    )}
+                  </>
+                )}
+              </span>
+              <button
+                onClick={() => setIsLobbyOpen(true)}
+                className="ml-1 text-[11px] px-2.5 py-0.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 font-bold border border-cyan-800/60 transition-colors"
+              >
+                {networkState.connected ? 'Room Details' : 'Copy Link'}
+              </button>
+            </div>
+          )}
+
           <BoardView
             board={board}
             theme={theme}
@@ -386,19 +454,42 @@ export function App() {
                 board.currentTurn !== (networkState.role === 'host' ? 1 : 2))
             }
           />
+
+          {/* Floating In-Game Chat for Mobile & Smaller Screens */}
+          {mode === 'online-1v1' && isChatOpen && (
+            <div className="lg:hidden">
+              <InGameChat
+                isFloating={true}
+                networkState={networkState}
+                messages={chatMessages}
+                onSendMessage={handleSendChatMessage}
+                onOpenLobby={() => setIsLobbyOpen(true)}
+                onClose={() => setIsChatOpen(false)}
+              />
+            </div>
+          )}
         </main>
 
         {/* Right Sidebar */}
         <aside className="w-80 h-full border-l border-slate-800/80 bg-slate-950/70 backdrop-blur-md p-3 flex flex-col gap-3 overflow-hidden z-20 hidden lg:flex">
-          <EngineInsights
-            stats={aiStats}
-            mode={mode}
-            aiVsAiRunning={aiVsAiRunning}
-            aiVsAiSpeed={aiVsAiSpeed}
-            onToggleAiVsAi={() => setAiVsAiRunning((r) => !r)}
-            onStepAiVsAi={() => triggerAiTurn()}
-            onChangeSpeed={(spd) => setAiVsAiSpeed(spd)}
-          />
+          {mode === 'online-1v1' ? (
+            <InGameChat
+              networkState={networkState}
+              messages={chatMessages}
+              onSendMessage={handleSendChatMessage}
+              onOpenLobby={() => setIsLobbyOpen(true)}
+            />
+          ) : (
+            <EngineInsights
+              stats={aiStats}
+              mode={mode}
+              aiVsAiRunning={aiVsAiRunning}
+              aiVsAiSpeed={aiVsAiSpeed}
+              onToggleAiVsAi={() => setAiVsAiRunning((r) => !r)}
+              onStepAiVsAi={() => triggerAiTurn()}
+              onChangeSpeed={(spd) => setAiVsAiSpeed(spd)}
+            />
+          )}
 
           <div className="flex-1 overflow-hidden">
             <MoveHistory
