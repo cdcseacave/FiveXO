@@ -108,7 +108,14 @@ export function App() {
     networkRef.current = net;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const roomParam = urlParams.get('room');
+    let roomParam = urlParams.get('room');
+    if (!roomParam && window.location.hash.includes('room=')) {
+      const hashPart = window.location.hash.includes('?') 
+        ? window.location.hash.split('?')[1] 
+        : window.location.hash.replace(/^#\/?/, '');
+      const hashParams = new URLSearchParams(hashPart);
+      roomParam = hashParams.get('room');
+    }
     if (roomParam) {
       setMode('online-1v1');
       setIsLobbyOpen(true);

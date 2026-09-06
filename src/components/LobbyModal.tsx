@@ -25,24 +25,62 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'host' | 'join'>('host');
   const [joinCode, setJoinCode] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [chatInput, setChatInput] = useState('');
 
   if (!isOpen) return null;
 
-  const handleCopyLink = () => {
-    if (!networkState.roomCode) return;
-    const url = `${window.location.origin}${window.location.pathname}?room=${networkState.roomCode}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    if (!text) return false;
+    // 1. Try modern async Clipboard API if available and in secure context
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (err) {
+        console.warn('navigator.clipboard.writeText failed, using fallback', err);
+      }
+    }
+    // 2. Universal fallback for HTTP / LAN IP contexts
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch (err) {
+      console.warn('execCommand copy fallback failed', err);
+      return false;
+    }
   };
 
-  const handleCopyCode = () => {
+  const inviteUrl = networkState.roomCode
+    ? `${window.location.origin}${window.location.pathname}?room=${networkState.roomCode}`
+    : '';
+
+  const handleCopyLink = async () => {
+    if (!inviteUrl) return;
+    const ok = await copyToClipboard(inviteUrl);
+    if (ok) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  const handleCopyCode = async () => {
     if (!networkState.roomCode) return;
-    navigator.clipboard.writeText(networkState.roomCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyToClipboard(networkState.roomCode);
+    if (ok) {
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
   };
 
   const handleSendChat = (e: React.FormEvent) => {
@@ -181,22 +219,56 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                     <div className="flex gap-2">
                       <button
                         onClick={handleCopyCode}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors"
                       >
-                        {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                        <span>{copied ? 'Copied Code!' : 'Copy Room Code'}</span>
+                        {copiedCode ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                        <span>{copiedCode ? 'Copied Code!' : 'Copy Room Code'}</span>
                       </button>
 
                       <button
                         onClick={handleCopyLink}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-xl text-xs font-bold transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-cyan-600 hover:bg-cyan-500 text-slate-950 rounded-xl text-xs font-bold transition-colors"
                       >
-                        <Globe size={14} />
-                        <span>Copy Invite Link</span>
+                        {copiedLink ? <Check size={14} className="text-slate-950" /> : <Globe size={14} />}
+                        <span>{copiedLink ? 'Copied Link!' : 'Copy Direct Link'}</span>
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-2 animate-pulse">
+                    {/* Visible Invite Link Field */}
+                    <div className="space-y-1 text-left">
+                      <label className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">
+                        Direct Invite Link
+                      </label>
+                      <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+                        <input
+                          type="text"
+                          readOnly
+                          value={inviteUrl}
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                          className="flex-1 bg-transparent text-[11px] font-mono text-cyan-300 outline-none select-all truncate"
+                        />
+                        <button
+                          onClick={handleCopyLink}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[11px] font-semibold transition-colors"
+                        >
+                          {copiedLink ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* LAN / Private IP Explanatory Tip */}
+                    {typeof window !== 'undefined' &&
+                     (window.location.hostname === 'localhost' ||
+                      window.location.hostname === '127.0.0.1' ||
+                      window.location.hostname.startsWith('10.') ||
+                      window.location.hostname.startsWith('192.168.') ||
+                      window.location.hostname.startsWith('172.')) && (
+                      <p className="text-[11px] text-amber-300/90 bg-amber-950/40 border border-amber-500/30 rounded-xl p-2.5 text-left leading-relaxed">
+                        💡 <strong>LAN / Private IP Host:</strong> If your opponent is not on your local network, they can open their own copy of FiveXO, click <strong>Join Game</strong>, and enter your code: <strong className="text-cyan-300 font-mono tracking-wider">{networkState.roomCode}</strong>.
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-1 animate-pulse">
                       <Radio size={14} className="text-cyan-400" />
                       <span>Waiting for opponent to connect...</span>
                     </div>
