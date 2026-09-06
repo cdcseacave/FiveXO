@@ -143,8 +143,16 @@ export const BoardView: React.FC<BoardViewProps> = ({
     }
   }, []);
 
-  // Single frame on-demand renderer
-  const renderFrame = useCallback(
+  // Strict 30 FPS Capping & On-Demand Scheduler
+  const FPS_CAP = 30;
+  const FRAME_INTERVAL_MS = 1000 / FPS_CAP; // ~33.33ms
+
+  const lastRenderTimeRef = useRef<number>(0);
+  const scheduledFrameRef = useRef<number | null>(null);
+  const scheduledTimerRef = useRef<number | null>(null);
+
+  // Core render function
+  const doRender = useCallback(
     (time: number = performance.now()) => {
       if (
         rendererRef.current &&
@@ -152,6 +160,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         viewportSize.width > 0 &&
         viewportSize.height > 0
       ) {
+        lastRenderTimeRef.current = time;
         rendererRef.current.render(
           board,
           cameraRef.current,
@@ -172,30 +181,83 @@ export const BoardView: React.FC<BoardViewProps> = ({
     [board, theme, hoverCoord, currentTurn, showThreats, lastMove, winInfo, viewportSize]
   );
 
-  // On-Demand Render:
-  // - When winInfo is active, runs continuous 60fps loop for the celebratory laser.
-  // - When idle (turn-based play), renders ONCE per state change, then uses 0% GPU / CPU.
+  // Request redraw with strict 30 FPS rate limit
+  const requestCappedRender = useCallback(() => {
+    if (scheduledFrameRef.current !== null || scheduledTimerRef.current !== null) {
+      // Frame already queued in the current 33.3ms window; coalesce into single draw
+      return;
+    }
+
+    const now = performance.now();
+    const elapsed = now - lastRenderTimeRef.current;
+
+    if (elapsed >= FRAME_INTERVAL_MS) {
+      scheduledFrameRef.current = requestAnimationFrame((time) => {
+        scheduledFrameRef.current = null;
+        doRender(time);
+      });
+    } else {
+      const waitMs = Math.max(1, Math.ceil(FRAME_INTERVAL_MS - elapsed));
+      scheduledTimerRef.current = window.setTimeout(() => {
+        scheduledTimerRef.current = null;
+        scheduledFrameRef.current = requestAnimationFrame((time) => {
+          scheduledFrameRef.current = null;
+          doRender(time);
+        });
+      }, waitMs);
+    }
+  }, [doRender]);
+
+  // Clean up pending timers and animation frames on unmount
   useEffect(() => {
-    let animId: number | null = null;
+    return () => {
+      if (scheduledFrameRef.current !== null) {
+        cancelAnimationFrame(scheduledFrameRef.current);
+      }
+      if (scheduledTimerRef.current !== null) {
+        clearTimeout(scheduledTimerRef.current);
+      }
+    };
+  }, []);
+
+  // On-Demand Render Trigger:
+  // - When winInfo is active, runs continuous loop capped at 30 FPS.
+  // - When idle (turn-based play), renders ONCE per state change (capped at 30 FPS), then uses 0% GPU / CPU.
+  useEffect(() => {
     if (winInfo && winInfo.line.length >= 5) {
       let active = true;
-      const loop = (time: number) => {
+      let animId: number | null = null;
+      let lastTime = 0;
+
+      const winLoop = (time: number) => {
         if (!active) return;
-        renderFrame(time);
-        animId = requestAnimationFrame(loop);
+        if (time - lastTime >= FRAME_INTERVAL_MS) {
+          lastTime = time;
+          doRender(time);
+        }
+        animId = requestAnimationFrame(winLoop);
       };
-      animId = requestAnimationFrame(loop);
+
+      animId = requestAnimationFrame(winLoop);
       return () => {
         active = false;
         if (animId) cancelAnimationFrame(animId);
       };
     } else {
-      animId = requestAnimationFrame((time) => renderFrame(time));
-      return () => {
-        if (animId) cancelAnimationFrame(animId);
-      };
+      requestCappedRender();
     }
-  }, [winInfo, renderFrame, camera]);
+  }, [
+    winInfo,
+    board,
+    camera,
+    hoverCoord,
+    theme,
+    showThreats,
+    lastMove,
+    viewportSize,
+    doRender,
+    requestCappedRender,
+  ]);
 
   // Auto-center on new last move if off-screen
   useEffect(() => {

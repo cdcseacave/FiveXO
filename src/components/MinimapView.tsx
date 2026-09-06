@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Board } from '../engine/board';
 import type { Camera } from '../graphics/board-renderer';
 import { MinimapRenderer } from '../graphics/minimap';
@@ -26,17 +26,60 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
   const rendererRef = useRef<MinimapRenderer | null>(null);
   const isDraggingRef = useRef<boolean>(false);
 
+  const FPS_CAP = 30;
+  const FRAME_INTERVAL_MS = 1000 / FPS_CAP; // ~33.33ms
+  const lastRenderTimeRef = useRef<number>(0);
+  const scheduledFrameRef = useRef<number | null>(null);
+  const scheduledTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (canvasRef.current && !rendererRef.current) {
       rendererRef.current = new MinimapRenderer(canvasRef.current);
     }
   }, []);
 
-  useEffect(() => {
+  const doRender = useCallback(() => {
     if (rendererRef.current) {
+      lastRenderTimeRef.current = performance.now();
       rendererRef.current.render(board, camera, viewportWidth, viewportHeight, theme);
     }
   }, [board, camera, viewportWidth, viewportHeight, theme]);
+
+  const requestCappedRender = useCallback(() => {
+    if (scheduledFrameRef.current !== null || scheduledTimerRef.current !== null) {
+      return;
+    }
+    const now = performance.now();
+    const elapsed = now - lastRenderTimeRef.current;
+    if (elapsed >= FRAME_INTERVAL_MS) {
+      scheduledFrameRef.current = requestAnimationFrame(() => {
+        scheduledFrameRef.current = null;
+        doRender();
+      });
+    } else {
+      const waitMs = Math.max(1, Math.ceil(FRAME_INTERVAL_MS - elapsed));
+      scheduledTimerRef.current = window.setTimeout(() => {
+        scheduledTimerRef.current = null;
+        scheduledFrameRef.current = requestAnimationFrame(() => {
+          scheduledFrameRef.current = null;
+          doRender();
+        });
+      }, waitMs);
+    }
+  }, [doRender]);
+
+  // Render on-demand capped to 30 FPS
+  useEffect(() => {
+    requestCappedRender();
+  }, [board, camera, viewportWidth, viewportHeight, theme, requestCappedRender]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scheduledFrameRef.current !== null) cancelAnimationFrame(scheduledFrameRef.current);
+      if (scheduledTimerRef.current !== null) clearTimeout(scheduledTimerRef.current);
+    };
+  }, []);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     isDraggingRef.current = true;
