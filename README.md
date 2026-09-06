@@ -1,5 +1,7 @@
 # FiveXO (64x64 Grand Gomoku & SOTA Classical AI)
 
+> 🎮 **Live Web App (Play Instantly in Browser)**: **[https://cdcseacave.github.io/FiveXO/](https://cdcseacave.github.io/FiveXO/)**
+
 **FiveXO** is a high-performance, web-based Five-in-a-Row (Gomoku / Connect5) application played on an expansive **64x64 grid** (4,096 cells). It features a tournament-grade classical AI player (built completely without Machine Learning), smooth 60fps pan & zoom with an interactive radar minimap, procedural Web Audio sound effects & ambient generative music, and serverless WebRTC peer-to-peer online multiplayer.
 
 ---
