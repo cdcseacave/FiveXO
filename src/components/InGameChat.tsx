@@ -68,8 +68,8 @@ export const InGameChat: React.FC<InGameChatProps> = ({
           <span
             className={`w-2.5 h-2.5 rounded-full ${
               networkState.connected
-                ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse'
-                : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse'
+                ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
             }`}
           />
           <div>

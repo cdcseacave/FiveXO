@@ -151,8 +151,10 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           >
             <span
               className={`w-2.5 h-2.5 rounded-full ${
-                currentTurn === 1 ? 'bg-cyan-400' : 'bg-amber-400'
-              } animate-pulse`}
+                currentTurn === 1
+                  ? 'bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]'
+                  : 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+              }`}
             />
             <span>{currentTurn === 1 ? 'PLAYER X (BLACK)' : 'PLAYER O (WHITE)'}</span>
           </div>
@@ -172,8 +174,10 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           >
             <span
               className={`w-2 h-2 rounded-full ${
-                networkState.connected ? 'bg-emerald-400' : 'bg-amber-400'
-              } animate-pulse`}
+                networkState.connected
+                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                  : 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+              }`}
             />
             <span>
               {networkState.connected
@@ -206,7 +210,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           >
             <MessageSquare size={16} />
             {unreadChatCount > 0 && !isChatOpen && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center animate-bounce shadow-md">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center shadow-[0_0_8px_rgba(244,63,94,0.8)]">
                 {unreadChatCount}
               </span>
             )}
@@ -269,7 +273,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           title={musicEnabled ? 'Stop Ambient Music (M)' : 'Play Ambient Music (M)'}
           className={`p-2 rounded-lg transition-colors ${
             musicEnabled
-              ? 'text-teal-400 bg-teal-500/20 animate-pulse'
+              ? 'text-teal-400 bg-teal-500/20 shadow-[0_0_8px_rgba(20,184,166,0.4)]'
               : 'text-slate-600 hover:text-slate-400'
           }`}
         >

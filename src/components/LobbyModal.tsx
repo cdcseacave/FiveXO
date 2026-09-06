@@ -118,7 +118,7 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
           <div className="space-y-4">
             <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                 <span className="text-xs font-semibold text-emerald-300">
                   Connected to {networkState.remotePlayerName}
                 </span>
@@ -275,7 +275,7 @@ export const LobbyModal: React.FC<LobbyModalProps> = ({
                     )}
 
                     <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-2 text-xs text-slate-400 animate-pulse">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
                         <Radio size={14} className="text-cyan-400" />
                         <span>Waiting for opponent...</span>
                       </div>

@@ -29,7 +29,7 @@ export const EngineInsights: React.FC<EngineInsightsProps> = ({
           <span>SOTA CLASSICAL AI INSIGHTS</span>
         </div>
         {stats?.thinking && (
-          <span className="flex items-center gap-1 text-[11px] text-amber-400 font-mono animate-pulse">
+          <span className="flex items-center gap-1 text-[11px] text-amber-400 font-mono font-semibold">
             <Activity size={12} /> Thinking...
           </span>
         )}

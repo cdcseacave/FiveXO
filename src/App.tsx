@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Board } from './engine/board';
 import type { GameMode, BoardTheme, AIDifficulty, Player, AIStats } from './engine/types';
 import { BoardView } from './components/BoardView';
@@ -151,10 +151,11 @@ export function App() {
     }
   }, [musicEnabled, musicTheme, musicVolume]);
 
-  const lastMove: [number, number] | null =
-    board.history.length > 0
-      ? [board.history[board.history.length - 1].x, board.history[board.history.length - 1].y]
-      : null;
+  const lastMove = useMemo<[number, number] | null>(() => {
+    if (board.history.length === 0) return null;
+    const last = board.history[board.history.length - 1];
+    return [last.x, last.y];
+  }, [board.history.length]);
 
   // Execute Move
   const executeMove = useCallback(

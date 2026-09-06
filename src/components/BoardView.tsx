@@ -98,6 +98,8 @@ export const BoardView: React.FC<BoardViewProps> = ({
 
   // Initial center on board tracker
   const hasCenteredInitialRef = useRef<boolean>(false);
+  const lastMoveRef = useRef(lastMove);
+  lastMoveRef.current = lastMove;
 
   // Resize listener & robust initial center
   useEffect(() => {
@@ -108,20 +110,27 @@ export const BoardView: React.FC<BoardViewProps> = ({
       const rect = container.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
 
-      setViewportSize({ width: rect.width, height: rect.height });
+      const w = Math.round(rect.width);
+      const h = Math.round(rect.height);
+
+      setViewportSize((prev) => {
+        if (prev.width === w && prev.height === h) return prev;
+        return { width: w, height: h };
+      });
+
       if (canvasRef.current && rendererRef.current) {
-        rendererRef.current.resize(rect.width, rect.height);
+        rendererRef.current.resize(w, h);
       }
 
       if (!hasCenteredInitialRef.current) {
         hasCenteredInitialRef.current = true;
         const targetScale = 0.75;
-        const targetX = lastMove ? lastMove[0] : 32;
-        const targetY = lastMove ? lastMove[1] : 32;
+        const targetX = lastMoveRef.current ? lastMoveRef.current[0] : 32;
+        const targetY = lastMoveRef.current ? lastMoveRef.current[1] : 32;
         const worldX = RULER_MARGIN + (targetX + 0.5) * CELL_PIXELS;
         const worldY = RULER_MARGIN + (targetY + 0.5) * CELL_PIXELS;
-        const newX = rect.width / 2 - worldX * targetScale;
-        const newY = rect.height / 2 - worldY * targetScale;
+        const newX = w / 2 - worldX * targetScale;
+        const newY = h / 2 - worldY * targetScale;
         setCamera({
           x: newX,
           y: newY,
@@ -134,7 +143,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     const observer = new ResizeObserver(handleResize);
     observer.observe(container);
     return () => observer.disconnect();
-  }, [lastMove]);
+  }, []);
 
   // Initialize renderer
   useEffect(() => {
@@ -181,6 +190,9 @@ export const BoardView: React.FC<BoardViewProps> = ({
     [board, theme, hoverCoord, currentTurn, showThreats, lastMove, winInfo, viewportSize]
   );
 
+  const doRenderRef = useRef(doRender);
+  doRenderRef.current = doRender;
+
   // Request redraw with strict 30 FPS rate limit
   const requestCappedRender = useCallback(() => {
     if (scheduledFrameRef.current !== null || scheduledTimerRef.current !== null) {
@@ -194,7 +206,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
     if (elapsed >= FRAME_INTERVAL_MS) {
       scheduledFrameRef.current = requestAnimationFrame((time) => {
         scheduledFrameRef.current = null;
-        doRender(time);
+        doRenderRef.current(time);
       });
     } else {
       const waitMs = Math.max(1, Math.ceil(FRAME_INTERVAL_MS - elapsed));
@@ -202,11 +214,11 @@ export const BoardView: React.FC<BoardViewProps> = ({
         scheduledTimerRef.current = null;
         scheduledFrameRef.current = requestAnimationFrame((time) => {
           scheduledFrameRef.current = null;
-          doRender(time);
+          doRenderRef.current(time);
         });
       }, waitMs);
     }
-  }, [doRender]);
+  }, []);
 
   // Clean up pending timers and animation frames on unmount
   useEffect(() => {
@@ -233,7 +245,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         if (!active) return;
         if (time - lastTime >= FRAME_INTERVAL_MS) {
           lastTime = time;
-          doRender(time);
+          doRenderRef.current(time);
         }
         animId = requestAnimationFrame(winLoop);
       };
@@ -255,7 +267,6 @@ export const BoardView: React.FC<BoardViewProps> = ({
     showThreats,
     lastMove,
     viewportSize,
-    doRender,
     requestCappedRender,
   ]);
 
@@ -342,7 +353,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
       }
     }
 
-    if (rendererRef.current && !disabled) {
+    if (!isDraggingRef.current && rendererRef.current && !disabled) {
       const coord = rendererRef.current.screenToBoard(mouseX, mouseY, cameraRef.current);
       setHoverCoord((prev) => {
         if (!prev && !coord) return prev;
@@ -478,7 +489,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
         viewportWidth={viewportSize.width}
         viewportHeight={viewportSize.height}
         theme={theme}
-        onMinimapClick={(bx, by) => centerOnCoord(bx, by)}
+        onMinimapClick={centerOnCoord}
       />
 
       {/* Floating Viewport Controls */}
@@ -525,7 +536,7 @@ export const BoardView: React.FC<BoardViewProps> = ({
       {/* Coordinate & Zoom Indicator Badge */}
       <div className="absolute bottom-4 left-4 z-20 flex items-center gap-3 bg-slate-900/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-slate-700/60 text-xs font-mono text-slate-400 shadow-xl">
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
           Zoom: <strong className="text-slate-200">{Math.round(camera.scale * 100)}%</strong>
         </span>
         {hoverCoord && (

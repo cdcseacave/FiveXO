@@ -14,7 +14,7 @@ interface MinimapViewProps {
   onMinimapClick: (bx: number, by: number) => void;
 }
 
-export const MinimapView: React.FC<MinimapViewProps> = ({
+const MinimapViewComponent: React.FC<MinimapViewProps> = ({
   board,
   camera,
   viewportWidth,
@@ -45,6 +45,9 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
     }
   }, [board, camera, viewportWidth, viewportHeight, theme]);
 
+  const doRenderRef = useRef(doRender);
+  doRenderRef.current = doRender;
+
   const requestCappedRender = useCallback(() => {
     if (scheduledFrameRef.current !== null || scheduledTimerRef.current !== null) {
       return;
@@ -54,7 +57,7 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
     if (elapsed >= FRAME_INTERVAL_MS) {
       scheduledFrameRef.current = requestAnimationFrame(() => {
         scheduledFrameRef.current = null;
-        doRender();
+        doRenderRef.current();
       });
     } else {
       const waitMs = Math.max(1, Math.ceil(FRAME_INTERVAL_MS - elapsed));
@@ -62,11 +65,11 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
         scheduledTimerRef.current = null;
         scheduledFrameRef.current = requestAnimationFrame(() => {
           scheduledFrameRef.current = null;
-          doRender();
+          doRenderRef.current();
         });
       }, waitMs);
     }
-  }, [doRender]);
+  }, []);
 
   // Render on-demand capped to 30 FPS
   useEffect(() => {
@@ -123,3 +126,5 @@ export const MinimapView: React.FC<MinimapViewProps> = ({
     </div>
   );
 };
+
+export const MinimapView = React.memo(MinimapViewComponent);
