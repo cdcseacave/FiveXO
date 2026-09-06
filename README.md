@@ -52,7 +52,7 @@ Designed specifically for the vast 64x64 grid based on modern game theory and co
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v18+)
+- Node.js (v20.17+ or v22+ LTS recommended)
 - npm
 
 ### Installation & Development
